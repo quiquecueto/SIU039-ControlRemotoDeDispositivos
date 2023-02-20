@@ -8,8 +8,8 @@
 
     <Button
         android:id="@+id/forButton"
-        android:layout_width="203dp"
-        android:layout_height="107dp"
+        android:layout_width="169dp"
+        android:layout_height="91dp"
         android:layout_marginTop="132dp"
         android:width="200dp"
         android:height="75dp"
@@ -42,7 +42,7 @@
         android:id="@+id/disconnectButton"
         android:layout_width="142dp"
         android:layout_height="54dp"
-        android:layout_marginBottom="636dp"
+        android:layout_marginTop="40dp"
         android:width="200dp"
         android:height="75dp"
         android:text="Disconnect"
@@ -51,15 +51,17 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.84"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.0" />
 
     <Button
         android:id="@+id/backButton"
-        android:layout_width="206dp"
-        android:layout_height="113dp"
+        android:layout_width="169dp"
+        android:layout_height="91dp"
         android:layout_marginStart="108dp"
         android:layout_marginEnd="109dp"
-        android:layout_marginBottom="208dp"
+        android:layout_marginBottom="212dp"
         android:width="200dp"
         android:height="75dp"
         android:onClick="backward"
@@ -68,13 +70,13 @@
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintHorizontal_bias="0.56"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/stopButton"
-        android:layout_width="162dp"
-        android:layout_height="81dp"
+        android:layout_width="169dp"
+        android:layout_height="91dp"
         android:layout_marginStart="108dp"
         android:layout_marginEnd="109dp"
         android:layout_marginBottom="92dp"
@@ -90,31 +92,25 @@
 
     <Button
         android:id="@+id/leftButton"
-        android:layout_width="164dp"
-        android:layout_height="131dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="52dp"
-        android:layout_marginEnd="157dp"
-        android:layout_marginBottom="60dp"
+        android:layout_width="169dp"
+        android:layout_height="91dp"
         android:width="200dp"
         android:height="75dp"
         android:onClick="left"
         android:text="Left"
         android:textSize="20dp"
         android:textStyle="bold"
-        app:layout_constraintBottom_toTopOf="@+id/backButton"
-        app:layout_constraintEnd_toStartOf="@+id/rightButton"
-        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.066"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/forButton"
-        app:layout_constraintVertical_bias="0.45" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.437" />
 
     <Button
         android:id="@+id/rightButton"
-        android:layout_width="160dp"
-        android:layout_height="134dp"
-        android:layout_marginTop="53dp"
-        android:layout_marginEnd="16dp"
+        android:layout_width="169dp"
+        android:layout_height="91dp"
         android:width="200dp"
         android:height="75dp"
         android:onClick="right"
@@ -123,8 +119,10 @@
         android:textStyle="bold"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.933"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.378" />
+        app:layout_constraintVertical_bias="0.437" />
 
     <TextView
         android:id="@+id/textButton"
