@@ -39,6 +39,27 @@ public class MainActivity extends AppCompatActivity {
     InputStream inputStream;
     BluetoothSocket btSocket;
 
+    BroadcastReceiver discoveryResult = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            //Guardamos el nombre del dispositivo descubierto
+            String remoteDeviceName = intent.getStringExtra(BluetoothDevice.EXTRA_NAME);
+            //Guardamos el objeto Java del dispositivo descubierto, para poder conectar.
+            BluetoothDevice remoteDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+            //Leemos la intensidad de la radio con respecto a este dispositivo bluetooth
+            int rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI,Short.MIN_VALUE);
+            //Guardamos el dispositivo encontrado en la lista
+            deviceList.add(remoteDevice);
+            //Mostramos el evento en el Log.
+            Log.d("MyFirstApp", "Discovered "+ remoteDeviceName);
+            Log.d("MyFirstApp", "RSSI "+ rssi + "dBm");
+            if (remoteDeviceName != null && remoteDeviceName.equals("SUM_SCH3")) {
+                Log.d("onReceive", "Discovered SUM_SCH3:connecting");
+                connect(remoteDevice);
+            }
+        }
+    };
+
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,9 +79,10 @@ public class MainActivity extends AppCompatActivity {
     @SuppressLint("MissingPermission")
     public void onClickConnectButton(View view){
         if (bluetooth.isEnabled()){
+            bluetoothActive = true;
             checkBTPermissions();
             startDiscovery();
-            @SuppressLint("MissingPermission") String address = bluetooth.getAddress();
+            @SuppressLint({"MissingPermission", "HardwareIds"}) String address = bluetooth.getAddress();
             @SuppressLint("MissingPermission") String name = bluetooth.getName();
             //Mostramos la datos en pantalla (The information is shown in the screen)
             Toast.makeText(getApplicationContext(),"Bluetooth ENABLED:"+name+":"+address,
@@ -87,36 +109,14 @@ public class MainActivity extends AppCompatActivity {
     }
     @SuppressLint("MissingPermission")
     private void startDiscovery(){
+        Toast.makeText(getApplicationContext(),"Bluetooth ENABLED:"+bluetoothActive,
+                Toast.LENGTH_SHORT).show();
         if (bluetoothActive){
         //Borramos la lista de dispositivos anterior
             deviceList.clear();
             //Activamos un Intent Android que avise cuando se encuentre un dispositivo
             //NOTA: <<discoveryResult>> es una clase <<callback>> que describiremos en
             //el siguiente paso
-
-            BroadcastReceiver discoveryResult = new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    //Guardamos el nombre del dispositivo descubierto
-                    String remoteDeviceName = intent.getStringExtra(BluetoothDevice.EXTRA_NAME);
-                    //Guardamos el objeto Java del dispositivo descubierto, para poder conectar.
-                    BluetoothDevice remoteDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    //Leemos la intensidad de la radio con respecto a este dispositivo bluetooth
-                    int rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI,Short.MIN_VALUE);
-                    //Guardamos el dispositivo encontrado en la lista
-                    deviceList.add(remoteDevice);
-                    //Mostramos el evento en el Log.
-                    Toast.makeText(getApplicationContext(), "Discovered" + remoteDeviceName, Toast.LENGTH_SHORT).show();
-                    Log.d("MyFirstApp", "Discovered "+ remoteDeviceName);
-                    Log.d("MyFirstApp", "RSSI "+ rssi + "dBm");
-                    Toast.makeText(getApplicationContext(), "RSSI" + rssi + "dB", Toast.LENGTH_SHORT).show();
-                    if (remoteDeviceName.equals("SUM_SCH3")) {
-                        Log.d("onReceive", "Discovered SUM_SCH3:connecting");
-                        connect(remoteDevice);
-                    }
-                }
-            };
-
 
             registerReceiver(discoveryResult, new IntentFilter(BluetoothDevice.ACTION_FOUND));
             //Ponemos el adaptador bluetooth en modo <<Discovery>>
