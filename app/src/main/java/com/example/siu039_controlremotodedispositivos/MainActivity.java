@@ -13,6 +13,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -38,6 +39,9 @@ public class MainActivity extends AppCompatActivity {
     OutputStream outputStream;
     InputStream inputStream;
     BluetoothSocket btSocket;
+    FrameLayout cameraPreviewFrameLayout;
+    Camera mCamera;
+    CameraPreview mCameraPreview;
 
     BroadcastReceiver discoveryResult = new BroadcastReceiver() {
         @Override
@@ -73,9 +77,13 @@ public class MainActivity extends AppCompatActivity {
         turnLeftForwardButton= (Button) findViewById(R.id.leftButton);
         turnRightForwardButton= (Button) findViewById(R.id.rightButton);
         statusLabel = (TextView) findViewById(R.id.textButton);
-
-
+        cameraPreviewFrameLayout = (FrameLayout) findViewById(R.id.cameraView);
+        mCamera = getCameraInstance();
+        mCameraPreview = new CameraPreview(this, mCamera);
+        cameraPreviewFrameLayout = (FrameLayout) findViewById(R.id.cameraView);
+        cameraPreviewFrameLayout.addView(mCameraPreview);
     }
+
     @SuppressLint("MissingPermission")
     public void onClickConnectButton(View view){
         if (bluetooth.isEnabled()){
@@ -130,11 +138,9 @@ public class MainActivity extends AppCompatActivity {
                     Manifest.permission.ACCESS_COARSE_LOCATION)) {
                 case PackageManager.PERMISSION_DENIED:
                     if (ContextCompat.checkSelfPermission(getBaseContext(),
-                            Manifest.permission.ACCESS_COARSE_LOCATION) !=
-                            PackageManager.PERMISSION_GRANTED) {
+                            Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                         this.requestPermissions(new
-                                String[]{Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION}, 1001);
+                                String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1001);
                     }
                     break;
                 case PackageManager.PERMISSION_GRANTED:
@@ -208,6 +214,17 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e("forward", "ERROR:" + e);
         }
+    }
+
+    private android.hardware.Camera getCameraInstance() {
+        android.hardware.Camera camera = null;
+        try {
+            camera = android.hardware.Camera.open(0);
+        } catch (Exception e) {
+        // cannot get camera or does not exist
+            Log.d("getCameraInstance", "ERROR" + e);
+        }
+        return camera;
     }
 
 }
