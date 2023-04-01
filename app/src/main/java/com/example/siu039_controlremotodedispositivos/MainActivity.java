@@ -1,6 +1,7 @@
 package com.example.siu039_controlremotodedispositivos;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
@@ -42,6 +43,8 @@ public class MainActivity extends AppCompatActivity {
     FrameLayout cameraPreviewFrameLayout;
     Camera mCamera;
     CameraPreview mCameraPreview;
+
+    private static final int REQUEST_CAMERA_PERMISSION = 1;
 
     BroadcastReceiver discoveryResult = new BroadcastReceiver() {
         @Override
@@ -218,13 +221,35 @@ public class MainActivity extends AppCompatActivity {
 
     private android.hardware.Camera getCameraInstance() {
         android.hardware.Camera camera = null;
-        try {
-            camera = android.hardware.Camera.open(0);
-        } catch (Exception e) {
-        // cannot get camera or does not exist
-            Log.d("getCameraInstance", "ERROR" + e);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CAMERA_PERMISSION);
+            return getCameraInstance();
+        } else {
+            // Permisos concedidos, puedes usar la cámara
+            try {
+                camera = android.hardware.Camera.open(0);
+            } catch (Exception e) {
+                // cannot get camera or does not exist
+                Log.d("getCameraInstance", "ERROR" + e);
+            }
         }
         return camera;
     }
 
+
+
+
+// ...
+/*
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CAMERA_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permiso concedido, puedes usar la cámara
+            } else {
+                // Permiso denegado, no puedes usar la cámara
+            }
+        }
+    }*/
 }
