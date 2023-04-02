@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>TELEROBOT VERSION 1.0 18/7/2018</title>
+        <script type="text/JavaScript">
+        function timedRefresh(timeoutPeriod) {
+        setTimeout("location.reload(true);",timeoutPeriod);
+        }
+</script>
+    </head>
+    <body>
+        <body onload="JavaScript:timedRefresh(1000);">
+            <a href="/forward"> Robot Forward</a><br>
+            <a href="/backward"> Robot Backward</a><br>
+            <a href="/left"> Robot Left</a><br>
+            <a href="/right"> Robot Right</a><br>
+            <a href="/stop"> Robot Stop</a><br>
+            <a href="/increase"> Increase Velocity</a><br>
+            <a href="/decrease"> Decrease Velocity</a><br>
+            <img src=’camera.jpg’ height=’50 %’ id=’camerainput’>
+        </body>
+    </body>
+</html>

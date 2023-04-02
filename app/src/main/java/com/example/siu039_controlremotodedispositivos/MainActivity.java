@@ -14,16 +14,34 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.widget.*;
 
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintStream;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
+import java.util.StringTokenizer;
 import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
@@ -43,8 +61,11 @@ public class MainActivity extends AppCompatActivity {
     FrameLayout cameraPreviewFrameLayout;
     Camera mCamera;
     CameraPreview mCameraPreview;
-
+    static File mediaStorageDir;
+    static File mediaFile;
     private static final int REQUEST_CAMERA_PERMISSION = 1;
+    public static Handler handlerNetworkExecutorResult;
+    NetworkExecutor networkExecutor;
 
     BroadcastReceiver discoveryResult = new BroadcastReceiver() {
         @Override
@@ -67,7 +88,28 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    @SuppressLint("MissingInflatedId")
+    android.hardware.Camera.PictureCallback mPicture = new
+            android.hardware.Camera.PictureCallback() {
+                @Override
+                public void onPictureTaken(byte[] data, android.hardware.Camera camera) {
+                    byte[] resized = resizeImage(data);
+                    File pictureFile = getOutputMediaFile();
+                    if (pictureFile == null) {
+                        return;
+                    }
+                    try {
+                        FileOutputStream fos = new FileOutputStream(pictureFile);
+                        fos.write(resized);
+                        fos.close();
+                    } catch (Exception e) {
+                        Log.e("onPictureTaken", "ERROR:" + e);
+                    }
+                }
+            };
+
+
+
+    @SuppressLint({"MissingInflatedId", "HandlerLeak"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -85,6 +127,28 @@ public class MainActivity extends AppCompatActivity {
         mCameraPreview = new CameraPreview(this, mCamera);
         cameraPreviewFrameLayout = (FrameLayout) findViewById(R.id.cameraView);
         cameraPreviewFrameLayout.addView(mCameraPreview);
+        handlerNetworkExecutorResult = new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                Log.d("handlerNetworkExecute", (String) msg.obj);
+                if (msg != null) {
+                    if (msg.obj.equals("FORWARD")) {
+                        forward();
+                    } else if (msg.obj.equals("BACKWARD")) {
+                        backward();
+                    } else if (msg.obj.equals("LEFT")) {
+                        left();
+                    } else if (msg.obj.equals("RIGHT")) {
+                        right();
+                    } else if (msg.obj.equals("CAMERA")) {
+                        captureCamera();
+                    }
+                }
+            }
+        };
+
+        networkExecutor = new NetworkExecutor();
+        networkExecutor.start();
     }
 
     @SuppressLint("MissingPermission")
@@ -164,7 +228,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void forward(View view) {
+    public void forward() {
         try {
             String tmpStr = "WHEELS+70+110";
             byte bytes[] = tmpStr.getBytes();
@@ -175,7 +239,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void backward(View view) {
+    public void backward() {
         try {
             String tmpStr = "WHEELS+110+70";
             byte bytes[] = tmpStr.getBytes();
@@ -186,7 +250,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void left(View view) {
+    public void left() {
         try {
             String tmpStr = "WHEELS+110+90";
             byte bytes[] = tmpStr.getBytes();
@@ -197,7 +261,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void right(View view) {
+    public void right() {
         try {
             String tmpStr = "WHEELS+90+110";
             byte bytes[] = tmpStr.getBytes();
@@ -208,7 +272,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void stop(View view) {
+    public void stop() {
         try {
             String tmpStr = "WHEELS+90+90";
             byte bytes[] = tmpStr.getBytes();
@@ -236,20 +300,158 @@ public class MainActivity extends AppCompatActivity {
         return camera;
     }
 
-
-
-
-// ...
-/*
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_CAMERA_PERMISSION) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permiso concedido, puedes usar la cámara
-            } else {
-                // Permiso denegado, no puedes usar la cámara
+    private static File getOutputMediaFile() {
+        if (mediaStorageDir == null){
+            mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "SIU039-CameraController");
+            if (!mediaStorageDir.exists()) {
+                if (!mediaStorageDir.mkdirs()) {
+                    Log.d("SIU039-CameraController", "failed to create directory");
+                    return null;
+                }
             }
         }
-    }*/
+        if (mediaFile==null) {
+            mediaFile = new File(mediaStorageDir.getPath() + File.separator + "IMG.jpg");
+        }
+        return mediaFile;
+    }
+
+    public void captureCamera(){
+        if (mCamera!=null) {
+            mCamera.takePicture(null, null, mPicture);
+        }
+    }
+
+    byte[] resizeImage(byte[] input) {
+        Bitmap originalBitmap = BitmapFactory.decodeByteArray(input, 0, input.length);
+        Bitmap resizedBitmap = Bitmap.createScaledBitmap(originalBitmap, 80, 107,
+                true);
+        ByteArrayOutputStream blob = new ByteArrayOutputStream();
+        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, blob);
+        return blob.toByteArray();
+    }
+    public class NetworkExecutor extends Thread {
+
+        private static final int HTTP_SERVER_PORT = 8082;
+        final public int CODE_OK = 200;
+        final public int CODE_BADREQUEST = 400;
+        final public int CODE_FORBIDDEN = 403;
+        final public int CODE_NOTFOUND = 404;
+        final public int CODE_INTERNALSERVERERROR = 500;
+        final public int CODE_NOTIMPLEMENTED = 501;
+        String fileStr = readResourceTextFile();
+
+        public void run() {
+            Socket scliente = null;
+            ServerSocket unSocket = null;
+            while (true) {
+                try {
+                    unSocket = new ServerSocket(HTTP_SERVER_PORT); //Creamos el puerto
+                    scliente = unSocket.accept(); //Aceptando conexiones del navegador Web
+                    System.setProperty("line.separator", "\r\n");
+                    //Creamos los objetos para leer y escribir en el socket
+                    BufferedReader in = new BufferedReader(new InputStreamReader(scliente.getInputStream()));
+                    PrintStream out = new PrintStream(new BufferedOutputStream(scliente.getOutputStream()));
+                    //Leemos el comando que ha sido enviado por el servidor web
+                    //Ejemplo de comando: GET /index.html HTTP\1.0
+                    String cadena = in.readLine();
+
+                    StringTokenizer st = new StringTokenizer(cadena);
+                    String commandString = st.nextToken().toUpperCase();
+                    if (commandString.equals("GET")) {
+                        String urlObjectString = st.nextToken();
+                        Log.v("urlObjectString", urlObjectString);
+                        if (urlObjectString.toUpperCase().startsWith("/INDEX.HTML") ||
+                                urlObjectString.toUpperCase().equals("/INDEX.HTM") ||
+                                urlObjectString.equals("/")) {
+                            String headerStr = getHTTP_Header(CODE_OK, "text/html", fileStr.length());
+                            out.print(headerStr);
+                            out.println(fileStr);
+                            out.flush();
+                        }
+                        if (urlObjectString.toUpperCase().startsWith("/FORWARD")) {
+                            String headerStr = getHTTP_Header(CODE_OK, "text/html", fileStr.length());
+                            out.print(headerStr);
+                            out.println(fileStr);
+                            out.flush();
+                        }
+                        if (urlObjectString.toUpperCase().startsWith("/CAMERA.JPG") ||
+                                urlObjectString.toUpperCase().startsWith("/CAMERA.")) {
+                            File cameraFile = getOutputMediaFile();
+                            FileInputStream fis = null;
+                            boolean exist = true;
+                            try {
+                                fis = new FileInputStream(cameraFile);
+                            } catch (FileNotFoundException e) {
+                                exist = false;
+                            }
+                            if (exist) {
+                                String headerStr = getHTTP_Header(CODE_OK, "image/jpeg", (int) cameraFile.length());
+                                out.print(headerStr);
+                                byte[] buffer = new byte[4096];
+                                int n;
+                                while ((n = fis.read(buffer)) > 0) { // enviar archivo
+                                    out.write(buffer, 0, n);
+                                }
+                                out.flush();
+                                out.close();
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+
+        private String getHTTP_Header(int headerStatusCode, String headerContentType, int
+                headerFileLength) {
+            String result = getHTTP_HeaderStatus(headerStatusCode) +
+                    "\r\n" +
+                    getHTTP_HeaderContentLength(headerFileLength)+
+                    getHTTP_HeaderContentType(headerContentType)+
+                    "\r\n";
+            return result;
+        }
+
+        private String getHTTP_HeaderStatus(int headerStatusCode){
+            String result = "";
+            switch (headerStatusCode) {
+                case CODE_OK:
+                    result = "200 OK"; break;
+                case CODE_BADREQUEST:
+                    result = "400 Bad Request"; break;
+                case CODE_FORBIDDEN:
+                    result = "403 Forbidden"; break;
+                case CODE_NOTFOUND:
+                    result = "404 Not Found"; break;
+                case CODE_INTERNALSERVERERROR:
+                    result = "500 Internal Server Error"; break;
+                case CODE_NOTIMPLEMENTED:
+                    result = "501 Not Implemented"; break;
+            }
+            return ("HTTP/1.0 "+result);
+        }
+        private String getHTTP_HeaderContentLength(int headerFileLength){
+            return "Content-Length: " + headerFileLength + "\r\n";
+        }
+        private String getHTTP_HeaderContentType(String headerContentType){
+            return "Content-Type: "+headerContentType+"\r\n";
+        }
+        public String readResourceTextFile() {
+            String fileStr = "";
+            InputStream is = getResources().openRawResource(R.raw.index);
+            BufferedReader br = new BufferedReader(new InputStreamReader(is));
+            String readLine = null;
+            try {
+                while ((readLine = br.readLine()) != null) {
+                    fileStr = fileStr + readLine + "\r\n";
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return fileStr;
+        }
+    }
+
 }
