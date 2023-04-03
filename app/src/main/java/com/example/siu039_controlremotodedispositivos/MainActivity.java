@@ -45,6 +45,8 @@ import java.util.StringTokenizer;
 import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
+
+    //Variables globales usadas en la clase MainActivity
     Button connectButton;
     Button disconnectButton;
     Button forwardButton;
@@ -140,13 +142,14 @@ public class MainActivity extends AppCompatActivity {
                         left();
                     } else if (msg.obj.equals("RIGHT")) {
                         right();
+                    } else if (msg.obj.equals("STOP")) {
+                        stop();
                     } else if (msg.obj.equals("CAMERA")) {
                         captureCamera();
                     }
                 }
             }
         };
-
         networkExecutor = new NetworkExecutor();
         networkExecutor.start();
     }
