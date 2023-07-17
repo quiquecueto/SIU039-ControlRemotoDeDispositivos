@@ -1,5 +1,6 @@
 package com.example.siu039_controlremotodedispositivos;
 
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -51,8 +52,9 @@ public class MainActivity extends AppCompatActivity {
     Button disconnectButton;
     Button forwardButton;
     Button backwardButton;
-    Button turnLeftForwardButton;
-    Button turnRightForwardButton;
+    Button leftButton;
+    Button rightButton;
+    Button stopButton;
     TextView statusLabel;
     BluetoothAdapter bluetooth = BluetoothAdapter.getDefaultAdapter();
     public static Boolean bluetoothActive = false;
@@ -69,7 +71,10 @@ public class MainActivity extends AppCompatActivity {
     public static Handler handlerNetworkExecutorResult;
     NetworkExecutor networkExecutor;
 
+    boolean isConnected = false;
+
     BroadcastReceiver discoveryResult = new BroadcastReceiver() {
+        @RequiresApi(api = Build.VERSION_CODES.M)
         @Override
         public void onReceive(Context context, Intent intent) {
             //Guardamos el nombre del dispositivo descubierto
@@ -77,16 +82,31 @@ public class MainActivity extends AppCompatActivity {
             //Guardamos el objeto Java del dispositivo descubierto, para poder conectar.
             BluetoothDevice remoteDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
             //Leemos la intensidad de la radio con respecto a este dispositivo bluetooth
-            int rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI,Short.MIN_VALUE);
+            int rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE);
             //Guardamos el dispositivo encontrado en la lista
             deviceList.add(remoteDevice);
             //Mostramos el evento en el Log.
-            Log.d("MyFirstApp", "Discovered "+ remoteDeviceName);
-            Log.d("MyFirstApp", "RSSI "+ rssi + "dBm");
-            if (remoteDeviceName != null && remoteDeviceName.equals("SUM_SCH3")) {
-                Log.d("onReceive", "Discovered SUM_SCH3:connecting");
+            Log.d("MyFirstApp", "Discovered " + remoteDeviceName);
+            Log.d("MyFirstApp", "RSSI " + rssi + "dBm");
+            Log.d("MyFirstApp", "AMAI EL BLUETOOOOOTH");
+            if (remoteDeviceName != null && remoteDeviceName.equals("ROBOTIS_210_04")) {
+                connect(remoteDevice);
+            } else {
+                String macAddress = "80:65:6D:D8:64:2C"; //Samsung viejo
+                //String macAddress = "08:5B:D6:D9:0E:35"; //Jmonkey ordenador propio
+                remoteDevice = bluetooth.getRemoteDevice(macAddress);
+                //remoteDevice = bluetooth.getRemoteDevice("14:9D:09:EC:DC:A1"); //Xiaomi viejo
+                //remoteDevice = bluetooth.getRemoteDevice("74:15:75:77:50:64"); //Xiaomi nuevo
+                //remoteDevice = bluetooth.getRemoteDevice("80:65:6D:D8:64:2C"); //Samsung viejo
+                Log.d("MyFirstApp", "NOS CONECTAMOS");
                 connect(remoteDevice);
             }
+
+            Log.d("MyFirstApp", "LETS GOOOO");
+            /*if (remoteDeviceName != null && remoteDeviceName.equals("POCO X3 Pro")) {
+                Log.d("onReceive", "Discovered SUM_SCH3:connecting");
+
+            }*/
         }
     };
 
@@ -110,7 +130,6 @@ public class MainActivity extends AppCompatActivity {
             };
 
 
-
     @SuppressLint({"MissingInflatedId", "HandlerLeak"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -120,15 +139,41 @@ public class MainActivity extends AppCompatActivity {
         connectButton = (Button) findViewById(R.id.connectButton);
         disconnectButton = (Button) findViewById(R.id.disconnectButton);
         forwardButton = (Button) findViewById(R.id.forButton);
-        backwardButton= (Button) findViewById(R.id.backButton);
-        turnLeftForwardButton= (Button) findViewById(R.id.leftButton);
-        turnRightForwardButton= (Button) findViewById(R.id.rightButton);
-        statusLabel = (TextView) findViewById(R.id.textButton);
+        backwardButton = (Button) findViewById(R.id.backButton);
+        leftButton = (Button) findViewById(R.id.leftButton);
+        rightButton = (Button) findViewById(R.id.rightButton);
+        stopButton = (Button) findViewById(R.id.stopButton);
+        statusLabel = (TextView) findViewById(R.id.ipText);
         cameraPreviewFrameLayout = (FrameLayout) findViewById(R.id.cameraView);
         mCamera = getCameraInstance();
         mCameraPreview = new CameraPreview(this, mCamera);
         cameraPreviewFrameLayout = (FrameLayout) findViewById(R.id.cameraView);
         cameraPreviewFrameLayout.addView(mCameraPreview);
+        forwardButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                forward();
+            }
+        });
+        backwardButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                backward();
+            }
+        });
+        leftButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                left();
+            }
+        });
+        rightButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                right();
+            }
+        });
+        stopButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                stop();
+            }
+        });
         handlerNetworkExecutorResult = new Handler() {
             @Override
             public void handleMessage(Message msg) {
@@ -155,21 +200,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @SuppressLint("MissingPermission")
-    public void onClickConnectButton(View view){
-        if (bluetooth.isEnabled()){
+    public void onClickConnectButton(View view) {
+        if (bluetooth.isEnabled()) {
             bluetoothActive = true;
             checkBTPermissions();
             startDiscovery();
             @SuppressLint({"MissingPermission", "HardwareIds"}) String address = bluetooth.getAddress();
             @SuppressLint("MissingPermission") String name = bluetooth.getName();
             //Mostramos la datos en pantalla (The information is shown in the screen)
-            Toast.makeText(getApplicationContext(),"Bluetooth ENABLED:"+name+":"+address,
+            Toast.makeText(getApplicationContext(), "Bluetooth ENABLED:" + name + ":" + address,
                     Toast.LENGTH_SHORT).show();
-        }else{
-            Toast.makeText(getApplicationContext(),"Bluetooth NOT enabled",
+            disconnectButton.setEnabled(true);
+            connectButton.setEnabled(false);
+        } else {
+            Toast.makeText(getApplicationContext(), "Bluetooth NOT enabled",
                     Toast.LENGTH_SHORT).show();
-            startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE),1);
+            startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE), 1);
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    public void onClickDisconnectButton(View view) throws IOException {
+        btSocket.close();
+        /*bluetooth.disable();
+        bluetoothActive=false;*/
+        disconnectButton.setEnabled(false);
+        connectButton.setEnabled(true);
     }
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -185,12 +241,13 @@ public class MainActivity extends AppCompatActivity {
                         Toast.LENGTH_SHORT).show();
             }
     }
+
     @SuppressLint("MissingPermission")
-    private void startDiscovery(){
-        Toast.makeText(getApplicationContext(),"Bluetooth ENABLED:"+bluetoothActive,
+    private void startDiscovery() {
+        Toast.makeText(getApplicationContext(), "Bluetooth ENABLED:" + bluetoothActive,
                 Toast.LENGTH_SHORT).show();
-        if (bluetoothActive){
-        //Borramos la lista de dispositivos anterior
+        if (bluetoothActive) {
+            //Borramos la lista de dispositivos anterior
             deviceList.clear();
             //Activamos un Intent Android que avise cuando se encuentre un dispositivo
             //NOTA: <<discoveryResult>> es una clase <<callback>> que describiremos en
@@ -202,7 +259,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public void checkBTPermissions(){
+    public void checkBTPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             switch (ContextCompat.checkSelfPermission(getBaseContext(),
                     Manifest.permission.ACCESS_COARSE_LOCATION)) {
@@ -218,6 +275,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
     @SuppressLint("MissingPermission")
     protected void connect(BluetoothDevice device) {
         try {
@@ -226,8 +284,11 @@ public class MainActivity extends AppCompatActivity {
             Log.d("connect", "Client connected");
             inputStream = btSocket.getInputStream();
             outputStream = btSocket.getOutputStream();
+            Toast.makeText(getApplicationContext(), "Client connected", Toast.LENGTH_SHORT).show();
+            isConnected = true;
         }catch (Exception e) {
             Log.e("ERROR: connect", ">>", e);
+            isConnected = false;
         }
     }
 
@@ -327,12 +388,15 @@ public class MainActivity extends AppCompatActivity {
 
     byte[] resizeImage(byte[] input) {
         Bitmap originalBitmap = BitmapFactory.decodeByteArray(input, 0, input.length);
-        Bitmap resizedBitmap = Bitmap.createScaledBitmap(originalBitmap, 80, 107,
+        Bitmap resizedBitmap = Bitmap.createScaledBitmap(originalBitmap, 50, 60,
                 true);
         ByteArrayOutputStream blob = new ByteArrayOutputStream();
         resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, blob);
         return blob.toByteArray();
     }
+
+
+
     public class NetworkExecutor extends Thread {
 
         private static final int HTTP_SERVER_PORT = 8082;
@@ -350,6 +414,7 @@ public class MainActivity extends AppCompatActivity {
             while (true) {
                 try {
                     unSocket = new ServerSocket(HTTP_SERVER_PORT); //Creamos el puerto
+                    statusLabel.setText(unSocket.getLocalSocketAddress().toString());
                     scliente = unSocket.accept(); //Aceptando conexiones del navegador Web
                     System.setProperty("line.separator", "\r\n");
                     //Creamos los objetos para leer y escribir en el socket
@@ -373,6 +438,30 @@ public class MainActivity extends AppCompatActivity {
                             out.flush();
                         }
                         if (urlObjectString.toUpperCase().startsWith("/FORWARD")) {
+                            String headerStr = getHTTP_Header(CODE_OK, "text/html", fileStr.length());
+                            out.print(headerStr);
+                            out.println(fileStr);
+                            out.flush();
+                        }
+                        if (urlObjectString.toUpperCase().startsWith("/BACKWARD")) {
+                            String headerStr = getHTTP_Header(CODE_OK, "text/html", fileStr.length());
+                            out.print(headerStr);
+                            out.println(fileStr);
+                            out.flush();
+                        }
+                        if (urlObjectString.toUpperCase().startsWith("/LEFT")) {
+                            String headerStr = getHTTP_Header(CODE_OK, "text/html", fileStr.length());
+                            out.print(headerStr);
+                            out.println(fileStr);
+                            out.flush();
+                        }
+                        if (urlObjectString.toUpperCase().startsWith("/RIGHT")) {
+                            String headerStr = getHTTP_Header(CODE_OK, "text/html", fileStr.length());
+                            out.print(headerStr);
+                            out.println(fileStr);
+                            out.flush();
+                        }
+                        if (urlObjectString.toUpperCase().startsWith("/STOP")) {
                             String headerStr = getHTTP_Header(CODE_OK, "text/html", fileStr.length());
                             out.print(headerStr);
                             out.println(fileStr);
